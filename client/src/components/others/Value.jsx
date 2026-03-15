@@ -1,7 +1,8 @@
-import  { useState } from 'react';
+import { useState, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoShieldCheckmark, IoTrendingUp, IoPricetag } from 'react-icons/io5';
 import { IoIosArrowDown } from 'react-icons/io';
+import { ThemeContext } from '../../context/ThemeContext';
 
 const accordionData = [
   {
@@ -21,7 +22,12 @@ const accordionData = [
   }
 ];
 
-const AccordionItem = ({ item, isOpen, onToggle, index }) => {
+const AccordionItem = ({ item, isOpen, onToggle, index, isDark }) => {
+  const bgClass = isDark ? "bg-gray-900" : "bg-white";
+  const panelBgClass = isDark ? "bg-gray-800" : "bg-gray-50";
+  const titleColorClass = isDark ? "text-white" : "text-navy-800";
+  const contentColorClass = isDark ? "text-gray-200" : "text-gray-600";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -31,13 +37,13 @@ const AccordionItem = ({ item, isOpen, onToggle, index }) => {
     >
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
+        className={`w-full flex items-center justify-between p-4 ${bgClass} rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200`}
       >
         <div className="flex items-center gap-4">
           <div className="bg-blue-100 p-2 rounded-full">
             <item.icon className="w-6 h-6 text-blue-600" />
           </div>
-          <span className="text-lg font-semibold text-navy-800">{item.title}</span>
+          <span className={`text-lg font-semibold ${titleColorClass}`}>{item.title}</span>
         </div>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
@@ -55,8 +61,8 @@ const AccordionItem = ({ item, isOpen, onToggle, index }) => {
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="p-4 bg-gray-50 rounded-b-lg mt-1">
-              <p className="text-gray-600">{item.content}</p>
+            <div className={`p-4 ${panelBgClass} rounded-b-lg mt-1`}>
+              <p className={contentColorClass}>{item.content}</p>
             </div>
           </motion.div>
         )}
@@ -67,6 +73,8 @@ const AccordionItem = ({ item, isOpen, onToggle, index }) => {
 
 const Value = () => {
   const [openIndex, setOpenIndex] = useState(0);
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme === "dark";
 
   return (
     <div className="min-h-screen  py-16 px-4">
@@ -95,10 +103,10 @@ const Value = () => {
               <h3 className="text-orange-500 text-xl font-semibold mb-2">
                 Our Value
               </h3>
-              <h2 className="text-4xl font-bold text-navy-800 mb-4">
+              <h2 className={`text-4xl font-bold ${isDark ? "text-white" : "text-navy-800"} mb-4`}>
                 Value We Give to You
               </h2>
-              <p className="text-gray-600">
+              <p className={isDark ? "text-gray-200" : "text-gray-600"}>
                 We always ready to help by providing the best services for you.
                 We believe a good place to live can make your life better.
               </p>
@@ -109,6 +117,7 @@ const Value = () => {
                 <AccordionItem
                   key={index}
                   item={item}
+                  isDark={isDark}
                   isOpen={openIndex === index}
                   onToggle={() => setOpenIndex(openIndex === index ? -1 : index)}
                   index={index}
