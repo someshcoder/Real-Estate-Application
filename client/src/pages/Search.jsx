@@ -1,15 +1,96 @@
-import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState, useRef, useContext, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import ListingItem from "../components/seller/ListingItem";
 import propertiesData from "../components/seller/properties.json";
-import { Search, Home, ArrowUpDown, X } from "lucide-react";
+import { ThemeContext } from "../context/ThemeContext";
+import {
+  Search,
+  Home,
+  ArrowUpDown,
+  X,
+  SlidersHorizontal,
+  BedDouble,
+  Bath,
+  Tag,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  ChevronDown,
+  MapPin,
+  LayoutGrid,
+  List,
+  Star,
+  CheckCircle,
+} from "lucide-react";
 
+/* ─────────── Animation Variants ─────────── */
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.07 } },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" } },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 40, scale: 0.9 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1, 
+    transition: { type: "spring", stiffness: 100, damping: 15 } 
+  },
+  exit: { opacity: 0, y: -20, scale: 0.95, transition: { duration: 0.2 } },
+};
+
+const dropdownVariants = {
+  hidden: { opacity: 0, y: -8, scale: 0.96 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.22, type: "spring", stiffness: 260, damping: 22 } },
+  exit: { opacity: 0, y: -8, scale: 0.96, transition: { duration: 0.15 } },
+};
+
+const modalVariants = {
+  hidden: { opacity: 0, scale: 0.92, y: 30 },
+  visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.38, type: "spring", stiffness: 200, damping: 22 } },
+  exit: { opacity: 0, scale: 0.92, y: 30, transition: { duration: 0.25 } },
+};
+
+/* ─────────── Filter Pill ─────────── */
+function FilterPill({ label, active, onClick, icon: Icon }) {
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme === "dark";
+
+  return (
+    <motion.button
+      onClick={onClick}
+      whileHover={{ scale: 1.04 }}
+      whileTap={{ scale: 0.95 }}
+      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200 ${
+        active
+          ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/30"
+          : isDark
+          ? "bg-gray-800 border-gray-700 text-gray-300 hover:border-blue-500 hover:text-blue-400"
+          : "bg-white border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-600"
+      }`}
+    >
+      {Icon && <Icon className="w-3.5 h-3.5" />}
+      {label}
+    </motion.button>
+  );
+}
+
+/* ─────────── Main Component ─────────── */
 export default function SearchPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme === "dark";
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [selectedType, setSelectedType] = useState([]);
   const [selectedBeds, setSelectedBeds] = useState([]);
   const [selectedBaths, setSelectedBaths] = useState([]);
@@ -17,490 +98,629 @@ export default function SearchPage() {
   const [sortOption, setSortOption] = useState("default");
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState("grid");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  const sortDropdownRef = useRef(null);
+
+  /* ── Filter Logic ── */
+  const filterListings = useCallback(
+    (search, typeFilter, bedsFilter, bathsFilter, sort = sortOption) => {
+      let filtered = propertiesData.filter((p) => {
+        return (
+          !p.deleted &&
+          (search === "" ||
+            p.title?.toLowerCase().includes(search.toLowerCase()) ||
+            p.location?.toLowerCase().includes(search.toLowerCase())) &&
+          (typeFilter.length === 0 || typeFilter.includes(p.status?.toLowerCase())) &&
+          (bedsFilter.length === 0 || bedsFilter.includes(p.beds)) &&
+          (bathsFilter.length === 0 || bathsFilter.includes(p.baths))
+        );
+      });
+      if (sort === "priceLowToHigh") filtered.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+      else if (sort === "priceHighToLow") filtered.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+      else if (sort === "newest") filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setListings(filtered);
+    },
+    [sortOption]
+  );
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
-    setSearchTerm(urlParams.get("searchTerm") || "");
-
+    const term = urlParams.get("searchTerm") || "";
+    setSearchTerm(term);
+    setInputValue(term);
     const typeFilter = urlParams.get("type") ? urlParams.get("type").split(",") : [];
-    setSelectedType(typeFilter);
-
     const bedsFilter = urlParams.get("beds") ? urlParams.get("beds").split(",").map(Number) : [];
-    setSelectedBeds(bedsFilter);
-
     const bathsFilter = urlParams.get("baths") ? urlParams.get("baths").split(",").map(Number) : [];
+    setSelectedType(typeFilter);
+    setSelectedBeds(bedsFilter);
     setSelectedBaths(bathsFilter);
-
-    filterListings(searchTerm, typeFilter, bedsFilter, bathsFilter);
+    filterListings(term, typeFilter, bedsFilter, bathsFilter);
   }, [location.search, sortOption]);
 
-  const filterListings = (search, typeFilter, bedsFilter, bathsFilter) => {
-    let filtered = propertiesData.filter((property) => {
-      return (
-        !property.deleted &&
-        (search === "" ||
-          property.title.toLowerCase().includes(search.toLowerCase()) ||
-          property.location.toLowerCase().includes(search.toLowerCase())) &&
-        (typeFilter.length === 0 || typeFilter.includes(property.status?.toLowerCase())) &&
-        (bedsFilter.length === 0 || bedsFilter.includes(property.beds)) &&
-        (bathsFilter.length === 0 || bathsFilter.includes(property.baths))
-      );
-    });
-
-    // Apply sorting based on sortOption
-    if (sortOption === "priceLowToHigh") {
-      filtered.sort((a, b) => a.price - b.price);
-    } else if (sortOption === "priceHighToLow") {
-      filtered.sort((a, b) => b.price - a.price);
-    } else if (sortOption === "newest") {
-      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    }
-
-    setListings(filtered);
-  };
+  /* ── Close sort dropdown on outside click ── */
+  useEffect(() => {
+    const handler = (e) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target))
+        setShowSortDropdown(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    updateURL();
+    setSearchTerm(inputValue);
+    updateURL(inputValue, selectedType, selectedBeds, selectedBaths);
   };
 
   const handleFilterChange = (filterType, value) => {
-    let updatedFilters;
+    let uType = selectedType, uBeds = selectedBeds, uBaths = selectedBaths;
     if (filterType === "type") {
-      updatedFilters = selectedType.includes(value)
-        ? selectedType.filter((t) => t !== value)
-        : [...selectedType, value];
-      setSelectedType(updatedFilters);
+      uType = selectedType.includes(value) ? selectedType.filter((t) => t !== value) : [...selectedType, value];
+      setSelectedType(uType);
     } else if (filterType === "beds") {
-      updatedFilters = selectedBeds.includes(value)
-        ? selectedBeds.filter((b) => b !== value)
-        : [...selectedBeds, value];
-      setSelectedBeds(updatedFilters);
+      uBeds = selectedBeds.includes(value) ? selectedBeds.filter((b) => b !== value) : [...selectedBeds, value];
+      setSelectedBeds(uBeds);
     } else if (filterType === "baths") {
-      updatedFilters = selectedBaths.includes(value)
-        ? selectedBaths.filter((b) => b !== value)
-        : [...selectedBaths, value];
-      setSelectedBaths(updatedFilters);
+      uBaths = selectedBaths.includes(value) ? selectedBaths.filter((b) => b !== value) : [...selectedBaths, value];
+      setSelectedBaths(uBaths);
     }
-    updateURL();
+    updateURL(inputValue, uType, uBeds, uBaths);
   };
 
-  const updateURL = () => {
+  const updateURL = (term, type, beds, baths) => {
     const urlParams = new URLSearchParams();
-    if (searchTerm) urlParams.set("searchTerm", searchTerm);
-    if (selectedType.length > 0) urlParams.set("type", selectedType.join(","));
-    if (selectedBeds.length > 0) urlParams.set("beds", selectedBeds.join(","));
-    if (selectedBaths.length > 0) urlParams.set("baths", selectedBaths.join(","));
-
+    if (term) urlParams.set("searchTerm", term);
+    if (type.length > 0) urlParams.set("type", type.join(","));
+    if (beds.length > 0) urlParams.set("beds", beds.join(","));
+    if (baths.length > 0) urlParams.set("baths", baths.join(","));
     navigate(`/search?${urlParams.toString()}`);
   };
 
-  // Animation variants for components
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.8,
-        ease: "easeOut",
-        staggerChildren: 0.2,
-      },
-    },
+  const clearAllFilters = () => {
+    setSelectedType([]); setSelectedBeds([]); setSelectedBaths([]);
+    setInputValue(""); setSearchTerm("");
+    navigate("/search");
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5,
-        type: "spring",
-        stiffness: 100,
-      },
-    },
-  };
+  const activeFilterCount = selectedType.length + selectedBeds.length + selectedBaths.length;
 
-  const listItemVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        duration: 0.5,
-        type: "spring",
-        stiffness: 100,
-      },
-    },
-    exit: { opacity: 0, x: 20, transition: { duration: 0.3 } },
+  const sortLabels = {
+    default: "Default",
+    priceLowToHigh: "Price: Low → High",
+    priceHighToLow: "Price: High → Low",
+    newest: "Newest First",
   };
+  const sortIcons = { default: Star, priceLowToHigh: TrendingUp, priceHighToLow: TrendingDown, newest: Clock };
+  const SortIcon = sortIcons[sortOption] || Star;
 
-  const buttonVariants = {
-    hover: { scale: 1.05, boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.2)" },
-    tap: { scale: 0.95 },
-  };
+  /* ── Reusable class helpers ── */
+  const card = isDark
+    ? "bg-gray-800 border border-gray-700 shadow-lg"
+    : "bg-white border border-gray-200 shadow-md";
 
-  const iconVariants = {
-    hover: { scale: 1.1, transition: { duration: 0.3 } },
-    tap: { scale: 0.9 },
-  };
-
-  const dropdownVariants = {
-    hidden: { opacity: 0, y: -10, scale: 0.95 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: { duration: 0.3, type: "spring", stiffness: 120 },
-    },
-    exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.2 } },
-  };
-
-  const modalVariants = {
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: { duration: 0.4, type: "spring", stiffness: 100 },
-    },
-    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.3 } },
-  };
+  const subtext = isDark ? "text-gray-400" : "text-gray-500";
+  const heading = isDark ? "text-white" : "text-gray-800";
+  const inputBg = isDark ? "bg-gray-800 text-white placeholder-gray-500 border-gray-700" : "bg-white text-gray-800 placeholder-gray-400 border-gray-200";
+  const panelBg = isDark ? "bg-gray-900" : "bg-gray-50";
+  const labelColor = isDark ? "text-gray-300" : "text-gray-600";
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4 relative overflow-hidden"
-    >
-      {/* Animated Background Particles */}
+    <div className={`min-h-screen transition-colors duration-300 ${isDark ? "bg-gray-900" : "bg-gray-50"}`}>
+
+      {/* ── Hero Banner ── */}
       <motion.div
-        className="absolute inset-0 z-0"
-        initial={{ opacity: 0 }}
-        animate={{
-          opacity: [0.1, 0.3, 0.1],
-        }}
-        transition={{
-          duration: 5,
-          repeat: Infinity,
-          repeatType: "reverse",
-        }}
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className={`relative overflow-hidden py-14 px-4 ${isDark ? "bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" : "bg-gradient-to-br from-blue-50 to-white"} border-b ${isDark ? "border-gray-800" : "border-gray-200"}`}
       >
+        {/* Animated blobs */}
         <motion.div
-          className="absolute w-6 h-6 bg-blue-500 rounded-full opacity-40"
-          animate={{ y: [-20, 20, -20], x: [10, -10, 10] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          style={{ top: "10%", left: "15%" }}
+          className="absolute top-[-60px] left-[-60px] w-72 h-72 rounded-full opacity-20 pointer-events-none"
+          style={{ background: "radial-gradient(circle, #3b82f6, transparent)", filter: "blur(50px)" }}
+          animate={{ x: [0, 30, 0], y: [0, 20, 0] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
-          className="absolute w-8 h-8 bg-teal-500 rounded-full opacity-40"
-          animate={{ y: [30, -30, 30], x: [-15, 15, -15] }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-          style={{ top: "40%", left: "70%" }}
+          className="absolute bottom-[-40px] right-[-40px] w-60 h-60 rounded-full opacity-15 pointer-events-none"
+          style={{ background: "radial-gradient(circle, #a855f7, transparent)", filter: "blur(50px)" }}
+          animate={{ x: [0, -20, 0], y: [0, -30, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
         />
-        <motion.div
-          className="absolute w-5 h-5 bg-purple-500 rounded-full opacity-40"
-          animate={{ y: [-15, 15, -15], x: [20, -20, 20] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-          style={{ top: "60%", left: "30%" }}
-        />
-        <motion.div
-          className="absolute w-7 h-7 bg-indigo-500 rounded-full opacity-40"
-          animate={{ y: [25, -25, 25], x: [-10, 10, -10] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          style={{ top: "80%", left: "50%" }}
-        />
+
+        <div className="max-w-7xl mx-auto relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-full px-4 py-1.5 mb-5"
+          >
+            <CheckCircle className="w-3.5 h-3.5 text-blue-600" />
+            <span className="text-blue-600 text-xs font-bold uppercase tracking-widest">
+              Verified Property Listings
+            </span>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.2 }}
+            className={`text-4xl md:text-5xl font-extrabold mb-3 tracking-tight ${heading}`}
+          >
+            Find Your{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-500">
+              Dream Home
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.3 }}
+            className={`text-base md:text-lg max-w-xl mx-auto ${subtext}`}
+          >
+            Browse thousands of verified properties with smart filters and instant results.
+          </motion.p>
+        </div>
       </motion.div>
 
-      {/* Main Content Container */}
-      <div className="max-w-6xl mx-auto relative z-10">
-        {/* Search Bar with Sort By Toggle */}
-        <div className="mb-4 flex items-center space-x-3">
-          <motion.form
-            onSubmit={handleSearch}
-            variants={itemVariants}
-            className="flex-1 flex items-center border border-gray-600 rounded-xl overflow-hidden bg-gray-800 shadow-md"
-          >
-            <div className="relative w-full">
-              <motion.div
-                variants={iconVariants}
-                whileHover="hover"
-                whileTap="tap"
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              >
-                <Search className="w-5 h-5" />
-              </motion.div>
-              <input
-                type="text"
-                placeholder="Search by title or location..."
-                className="w-full pl-10 p-3 outline-none text-gray-200 bg-gray-800 placeholder-gray-400"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <motion.button
-              type="submit"
-              variants={buttonVariants}
-              whileHover="hover"
-              whileTap="tap"
-              className="bg-blue-500 text-white px-4 py-3 hover:bg-blue-600 transition-colors"
-            >
-              Search
-            </motion.button>
-          </motion.form>
+      {/* ── Main Content ── */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
 
-          {/* Sort By Toggle Button */}
-          <motion.div
-            variants={itemVariants}
-            className="relative"
-          >
-            <motion.button
-              onClick={() => setShowSortDropdown(!showSortDropdown)}
-              variants={buttonVariants}
-              whileHover="hover"
-              whileTap="tap"
-              className="bg-gray-800 text-gray-200 px-3 py-3 rounded-xl shadow-md flex items-center space-x-2 hover:bg-gray-700 transition-colors"
-            >
-              <ArrowUpDown className="w-5 h-5 text-blue-400" />
-              <span>Sort By</span>
-            </motion.button>
-
-            {/* Sort By Dropdown */}
-            {showSortDropdown && (
-              <motion.div
-                variants={dropdownVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg p-3 z-20"
-              >
-                <div className="space-y-2">
-                  <button
-                    onClick={() => {
-                      setSortOption("priceLowToHigh");
-                      setShowSortDropdown(false);
-                      filterListings(searchTerm, selectedType, selectedBeds, selectedBaths);
-                      setShowModal(true);
-                    }}
-                    className="w-full text-left px-3 py-2 text-gray-300 hover:bg-gray-700 rounded-md transition-colors"
-                  >
-                    Price: Low to High
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSortOption("priceHighToLow");
-                      setShowSortDropdown(false);
-                      filterListings(searchTerm, selectedType, selectedBeds, selectedBaths);
-                      setShowModal(true);
-                    }}
-                    className="w-full text-left px-3 py-2 text-gray-300 hover:bg-gray-700 rounded-md transition-colors"
-                  >
-                    Price: High to Low
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSortOption("newest");
-                      setShowSortDropdown(false);
-                      filterListings(searchTerm, selectedType, selectedBeds, selectedBaths);
-                      setShowModal(true);
-                    }}
-                    className="w-full text-left px-3 py-2 text-gray-300 hover:bg-gray-700 rounded-md transition-colors"
-                  >
-                    Newest First
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </motion.div>
-        </div>
-
-        {/* Filters Section */}
+        {/* ── Search Bar ── */}
         <motion.div
-          variants={containerVariants}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.35 }}
+          className="mb-5"
         >
-          {/* Property Type Filter */}
-          <motion.div
-            variants={itemVariants}
-            className="p-3 bg-gray-800 rounded-lg shadow-md"
-            whileHover={{ scale: 1.02, transition: { duration: 0.3 } }}
-          >
-            <h3 className="text-lg font-semibold mb-2 flex items-center text-gray-200">
-              <Home className="w-5 h-5 mr-2 text-blue-400" />
-              Property Type
-            </h3>
-            <div className="space-y-2">
-              {["for sale", "for rent"].map((type) => (
-                <label key={type} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedType.includes(type)}
-                    onChange={() => handleFilterChange("type", type)}
-                    className="accent-blue-500"
-                  />
-                  <span className="capitalize text-gray-300">{type}</span>
-                </label>
-              ))}
+          <form onSubmit={handleSearch}>
+            <div
+              className={`flex items-center rounded-2xl overflow-hidden border-2 transition-all duration-300 shadow-md ${
+                isSearchFocused
+                  ? "border-blue-500 shadow-blue-500/20 shadow-lg"
+                  : isDark ? "border-gray-700" : "border-gray-200"
+              } ${isDark ? "bg-gray-800" : "bg-white"}`}
+            >
+              <div className="flex items-center flex-1 px-5 py-3.5 gap-3">
+                <motion.div animate={{ scale: isSearchFocused ? 1.15 : 1 }} transition={{ duration: 0.2 }}>
+                  <Search className={`w-5 h-5 transition-colors ${isSearchFocused ? "text-blue-500" : subtext}`} />
+                </motion.div>
+                <input
+                  type="text"
+                  placeholder="Search by title, location or area..."
+                  className={`flex-1 bg-transparent outline-none text-base ${inputBg} border-0`}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setIsSearchFocused(false)}
+                />
+                {inputValue && (
+                  <motion.button
+                    type="button"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    onClick={() => setInputValue("")}
+                    className={`${subtext} hover:text-red-500 transition-colors`}
+                  >
+                    <X className="w-4 h-4" />
+                  </motion.button>
+                )}
+              </div>
+              <motion.button
+                type="submit"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="m-2 px-7 py-3 rounded-xl text-white font-bold text-sm transition-all bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-lg shadow-blue-500/25"
+              >
+                Search
+              </motion.button>
             </div>
-          </motion.div>
-
-          {/* Beds Filter */}
-          <motion.div
-            variants={itemVariants}
-            className="p-3 bg-gray-800 rounded-lg shadow-md"
-            whileHover={{ scale: 1.02, transition: { duration: 0.3 } }}
-          >
-            <h3 className="text-lg font-semibold mb-2 flex items-center text-gray-200">
-              <Home className="w-5 h-5 mr-2 text-blue-400" />
-              Bedrooms
-            </h3>
-            <div className="space-y-2">
-              {[1, 2, 3, 4, 5].map((bed) => (
-                <label key={bed} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedBeds.includes(bed)}
-                    onChange={() => handleFilterChange("beds", bed)}
-                    className="accent-blue-500"
-                  />
-                  <span className="text-gray-300">{bed} Beds</span>
-                </label>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Baths Filter */}
-          <motion.div
-            variants={itemVariants}
-            className="p-3 bg-gray-800 rounded-lg shadow-md"
-            whileHover={{ scale: 1.02, transition: { duration: 0.3 } }}
-          >
-            <h3 className="text-lg font-semibold mb-2 flex items-center text-gray-200">
-              <Home className="w-5 h-5 mr-2 text-blue-400" />
-              Bathrooms
-            </h3>
-            <div className="space-y-2">
-              {[1, 2, 3, 4].map((bath) => (
-                <label key={bath} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedBaths.includes(bath)}
-                    onChange={() => handleFilterChange("baths", bath)}
-                    className="accent-blue-500"
-                  />
-                  <span className="text-gray-300">{bath} Baths</span>
-                </label>
-              ))}
-            </div>
-          </motion.div>
+          </form>
         </motion.div>
 
-        {/* Listings Section */}
-        <motion.div variants={containerVariants}>
-          <motion.h1
-            variants={itemVariants}
-            className="text-3xl font-bold mb-4 text-gray-200"
-          >
-            Listing Results
-          </motion.h1>
-          <motion.div
-            layout
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-          >
-            {listings.length === 0 ? (
-              <motion.p
-                variants={itemVariants}
-                className="text-center text-gray-400 col-span-full"
+        {/* ── Controls Row ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.45 }}
+          className="flex flex-wrap items-center justify-between gap-3 mb-5"
+        >
+          {/* Left: Filter toggle + quick pills */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <motion.button
+              onClick={() => setShowFilters(!showFilters)}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border transition-all duration-200 ${
+                showFilters
+                  ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/25"
+                  : isDark
+                  ? "bg-gray-800 border-gray-700 text-gray-300 hover:border-blue-500 hover:text-blue-400"
+                  : "bg-white border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-600 shadow-sm"
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="bg-white text-blue-600 text-xs font-extrabold rounded-full w-5 h-5 flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </motion.button>
+
+            <FilterPill label="For Sale" icon={Tag} active={selectedType.includes("for sale")} onClick={() => handleFilterChange("type", "for sale")} />
+            <FilterPill label="For Rent" icon={Home} active={selectedType.includes("for rent")} onClick={() => handleFilterChange("type", "for rent")} />
+
+            {activeFilterCount > 0 && (
+              <motion.button
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                onClick={clearAllFilters}
+                className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-600 font-medium transition-colors"
               >
-                No properties found.
-              </motion.p>
-            ) : (
-              listings.map((property, index) => (
+                <X className="w-3.5 h-3.5" />
+                Clear all
+              </motion.button>
+            )}
+          </div>
+
+          {/* Right: View mode + sort */}
+          <div className="flex items-center gap-3">
+            {/* View Toggle */}
+            <div className={`flex items-center rounded-xl overflow-hidden border ${isDark ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-white"} shadow-sm`}>
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-2.5 transition-colors ${viewMode === "grid" ? "bg-blue-600 text-white" : `${subtext} hover:text-blue-500`}`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-2.5 transition-colors ${viewMode === "list" ? "bg-blue-600 text-white" : `${subtext} hover:text-blue-500`}`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="relative" ref={sortDropdownRef}>
+              <motion.button
+                onClick={() => setShowSortDropdown(!showSortDropdown)}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all duration-200 shadow-sm ${
+                  isDark
+                    ? "bg-gray-800 border-gray-700 text-gray-300 hover:border-blue-500 hover:text-blue-400"
+                    : "bg-white border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-600"
+                }`}
+              >
+                <SortIcon className="w-4 h-4 text-blue-500" />
+                <span className="hidden sm:inline">{sortLabels[sortOption]}</span>
+                <span className="sm:hidden"><ArrowUpDown className="w-4 h-4" /></span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showSortDropdown ? "rotate-180" : ""}`} />
+              </motion.button>
+
+              <AnimatePresence>
+                {showSortDropdown && (
+                  <motion.div
+                    variants={dropdownVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className={`absolute right-0 mt-2 w-52 rounded-2xl border overflow-hidden z-30 shadow-xl ${
+                      isDark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+                    }`}
+                  >
+                    {[
+                      { key: "default", label: "Default", Icon: Star },
+                      { key: "priceLowToHigh", label: "Price: Low → High", Icon: TrendingUp },
+                      { key: "priceHighToLow", label: "Price: High → Low", Icon: TrendingDown },
+                      { key: "newest", label: "Newest First", Icon: Clock },
+                    ].map(({ key, label, Icon }) => (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          setSortOption(key);
+                          setShowSortDropdown(false);
+                          if (key !== "default") setShowModal(true);
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+                          sortOption === key
+                            ? "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                            : isDark
+                            ? "text-gray-300 hover:bg-gray-700/60 hover:text-white"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {label}
+                        {sortOption === key && (
+                          <span className="ml-auto w-2 h-2 rounded-full bg-blue-500" />
+                        )}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ── Advanced Filters Panel ── */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden mb-6"
+            >
+              <div className={`grid grid-cols-1 md:grid-cols-3 gap-5 p-5 rounded-2xl border ${
+                isDark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200 shadow-md"
+              }`}>
+                {/* Property Type */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Tag className="w-4 h-4 text-blue-500" />
+                    <h3 className={`font-bold text-sm uppercase tracking-wide ${labelColor}`}>Property Type</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {["for sale", "for rent"].map((type) => (
+                      <FilterPill
+                        key={type}
+                        label={type === "for sale" ? "For Sale" : "For Rent"}
+                        active={selectedType.includes(type)}
+                        onClick={() => handleFilterChange("type", type)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Bedrooms */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <BedDouble className="w-4 h-4 text-blue-500" />
+                    <h3 className={`font-bold text-sm uppercase tracking-wide ${labelColor}`}>Bedrooms</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {[1, 2, 3, 4, 5].map((bed) => (
+                      <FilterPill
+                        key={bed}
+                        label={`${bed}+`}
+                        active={selectedBeds.includes(bed)}
+                        onClick={() => handleFilterChange("beds", bed)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Bathrooms */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Bath className="w-4 h-4 text-blue-500" />
+                    <h3 className={`font-bold text-sm uppercase tracking-wide ${labelColor}`}>Bathrooms</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {[1, 2, 3, 4].map((bath) => (
+                      <FilterPill
+                        key={bath}
+                        label={`${bath}+`}
+                        active={selectedBaths.includes(bath)}
+                        onClick={() => handleFilterChange("baths", bath)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Results Header ── */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.55 }}
+          className="flex items-center justify-between mb-5"
+        >
+          <div className="flex items-center gap-3">
+            <h2 className={`text-2xl font-extrabold ${heading}`}>Listing Results</h2>
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={listings.length}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+              >
+                {listings.length} found
+              </motion.span>
+            </AnimatePresence>
+          </div>
+
+          {searchTerm && (
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className={`flex items-center gap-1.5 text-sm ${subtext}`}
+            >
+              <MapPin className="w-3.5 h-3.5 text-blue-500" />
+              Results for &quot;<span className="text-blue-500 font-semibold">{searchTerm}</span>&quot;
+            </motion.div>
+          )}
+        </motion.div>
+
+        {/* ── Listings Grid / List ── */}
+        <AnimatePresence mode="wait">
+          {listings.length === 0 ? (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col items-center justify-center py-24 gap-5"
+            >
+              <motion.div
+                animate={{ y: [-6, 6, -6] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                className={`w-20 h-20 rounded-2xl flex items-center justify-center ${isDark ? "bg-gray-800 border border-gray-700" : "bg-blue-50 border border-blue-100"}`}
+              >
+                <Home className="w-10 h-10 text-blue-400" />
+              </motion.div>
+              <div className="text-center">
+                <p className={`text-lg font-bold mb-1 ${heading}`}>No properties found</p>
+                <p className={`text-sm ${subtext}`}>Try adjusting your search terms or filters</p>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={clearAllFilters}
+                className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-lg shadow-blue-500/25 transition-all"
+              >
+                Clear Filters
+              </motion.button>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="results"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              exit={{ opacity: 0 }}
+              className={
+                viewMode === "grid"
+                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                  : "flex flex-col gap-4"
+              }
+            >
+              {listings.map((property, index) => (
                 <motion.div
                   key={property.id}
-                  layout
-                  variants={listItemVariants}
+                  variants={cardVariants}
                   initial="hidden"
-                  animate="visible"
-                  exit="exit"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: "-50px" }}
                   custom={index}
-                  whileHover={{
-                    scale: 1.03,
-                    boxShadow: "0px 8px 16px rgba(0, 0, 0, 0.3)",
-                    transition: { duration: 0.3 },
-                  }}
+                  whileHover={{ y: -6, scale: 1.02, transition: { duration: 0.2 } }}
                 >
                   <ListingItem property={property} />
                 </motion.div>
-              ))
-            )}
-          </motion.div>
-        </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Modal for Top Sorted Properties */}
-      {showModal && (
-        <motion.div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
+      {/* ── Top Properties Modal ── */}
+      <AnimatePresence>
+        {showModal && (
           <motion.div
-            variants={modalVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto relative"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}
+            onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
           >
-            <motion.button
-              onClick={() => setShowModal(false)}
-              variants={buttonVariants}
-              whileHover="hover"
-              whileTap="tap"
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-200"
-            >
-              <X className="w-6 h-6" />
-            </motion.button>
-            <h2 className="text-2xl font-bold text-gray-200 mb-4">
-              Top 3 {sortOption === "priceLowToHigh" ? "Cheapest" : sortOption === "priceHighToLow" ? "Most Expensive" : "Newest"} Properties
-            </h2>
             <motion.div
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+              variants={modalVariants}
               initial="hidden"
               animate="visible"
-              variants={containerVariants}
+              exit="exit"
+              className={`w-full max-w-5xl max-h-[88vh] overflow-y-auto rounded-3xl border shadow-2xl ${
+                isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"
+              }`}
             >
-              {listings.length === 0 ? (
-                <motion.p
-                  variants={itemVariants}
-                  className="text-center text-gray-400 col-span-full"
+              {/* Modal Header */}
+              <div className={`sticky top-0 flex items-center justify-between px-6 py-5 border-b z-10 ${
+                isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-100"
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 flex items-center justify-center shadow-md shadow-blue-500/25">
+                    {sortOption === "priceLowToHigh" ? (
+                      <TrendingUp className="w-5 h-5 text-white" />
+                    ) : sortOption === "priceHighToLow" ? (
+                      <TrendingDown className="w-5 h-5 text-white" />
+                    ) : (
+                      <Clock className="w-5 h-5 text-white" />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className={`text-lg font-extrabold leading-none ${heading}`}>Top 3 Properties</h2>
+                    <p className={`text-xs mt-0.5 ${subtext}`}>
+                      {sortOption === "priceLowToHigh"
+                        ? "Most affordable picks"
+                        : sortOption === "priceHighToLow"
+                        ? "Premium luxury listings"
+                        : "Latest arrivals"}
+                    </p>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={() => setShowModal(false)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                    isDark ? "text-gray-400 hover:text-white hover:bg-gray-800" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                  }`}
                 >
-                  No properties found.
-                </motion.p>
-              ) : (
-                listings.slice(0, 3).map((property, index) => (
-                  <motion.div
-                    key={property.id}
-                    variants={listItemVariants}
-                    initial="hidden"
-                    animate="visible"
-                    custom={index}
-                    whileHover={{
-                      scale: 1.03,
-                      boxShadow: "0px 8px 16px rgba(0, 0, 0, 0.3)",
-                      transition: { duration: 0.3 },
-                    }}
-                  >
-                    <ListingItem property={property} />
-                  </motion.div>
-                ))
-              )}
+                  <X className="w-5 h-5" />
+                </motion.button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6">
+                <AnimatePresence>
+                  {listings.length === 0 ? (
+                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`text-center py-12 ${subtext}`}>
+                      No properties found.
+                    </motion.p>
+                  ) : (
+                    <motion.div
+                      variants={containerVariants}
+                      initial="hidden"
+                      animate="visible"
+                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+                    >
+                      {listings.slice(0, 3).map((property, index) => (
+                        <motion.div
+                          key={property.id}
+                          variants={cardVariants}
+                          custom={index}
+                          whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                          className="relative"
+                        >
+                          {/* Rank badge */}
+                          <div
+                            className={`absolute top-2 left-2 z-10 w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold text-white shadow-md`}
+                            style={{
+                              background:
+                                index === 0
+                                  ? "linear-gradient(135deg,#f59e0b,#d97706)"
+                                  : index === 1
+                                  ? "linear-gradient(135deg,#9ca3af,#6b7280)"
+                                  : "linear-gradient(135deg,#b45309,#92400e)",
+                            }}
+                          >
+                            #{index + 1}
+                          </div>
+                          <ListingItem property={property} />
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </motion.div>
           </motion.div>
-        </motion.div>
-      )}
-    </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
