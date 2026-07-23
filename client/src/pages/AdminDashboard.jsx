@@ -72,7 +72,7 @@ const AdminDashboard = () => {
                 body: JSON.stringify({ status: currentStatus === "Blocked" ? "Active" : "Blocked" })
             });
             if (!response.ok) throw new Error("Failed to update user status");
-            
+
             setUsers(users.map(user => user._id === id ? { ...user, status: currentStatus === "Blocked" ? "Active" : "Blocked" } : user));
         } catch (error) {
             console.error("Error toggling user block status:", error);
@@ -111,18 +111,16 @@ const AdminDashboard = () => {
                 <nav className="space-y-2 mt-4">
                     <button
                         onClick={() => setActiveTab("users")}
-                        className={`flex items-center p-3 text-gray-600 hover:bg-purple-50 rounded-lg w-full ${
-                            activeTab === "users" ? "bg-purple-50" : ""
-                        }`}
+                        className={`flex items-center p-3 text-gray-600 hover:bg-purple-50 rounded-lg w-full ${activeTab === "users" ? "bg-purple-50" : ""
+                            }`}
                     >
                         <FaUsers className="mr-3 text-purple-600" />
                         Users
                     </button>
                     <button
                         onClick={() => setActiveTab("properties")}
-                        className={`flex items-center p-3 text-gray-600 hover:bg-purple-50 rounded-lg w-full ${
-                            activeTab === "properties" ? "bg-purple-50" : ""
-                        }`}
+                        className={`flex items-center p-3 text-gray-600 hover:bg-purple-50 rounded-lg w-full ${activeTab === "properties" ? "bg-purple-50" : ""
+                            }`}
                     >
                         <FaHome className="mr-3 text-purple-600" />
                         Properties
@@ -145,9 +143,8 @@ const AdminDashboard = () => {
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => toggleBlockUser(user._id, user.status)}
-                                        className={`px-3 py-1 rounded shadow-md ${
-                                            user.status === "Blocked" ? "bg-green-500 text-white hover:bg-green-400" : "bg-yellow-500 text-white hover:bg-yellow-400"
-                                        }`}
+                                        className={`px-3 py-1 rounded shadow-md ${user.status === "Blocked" ? "bg-green-500 text-white hover:bg-green-400" : "bg-yellow-500 text-white hover:bg-yellow-400"
+                                            }`}
                                     >
                                         {user.status === "Blocked" ? "Unblock" : "Block"}
                                     </button>

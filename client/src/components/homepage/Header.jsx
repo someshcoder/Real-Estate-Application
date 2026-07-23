@@ -1,25 +1,48 @@
-import { FaSearch, FaBell, FaBars, FaTimes, FaUserCircle } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
-import { useState, useContext, useRef } from "react";
+import { FaSearch, FaBell, FaBars, FaTimes, FaUserCircle, FaSignOutAlt, FaCog } from "react-icons/fa";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useState, useContext, useRef, useEffect } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { ThemeContext } from "../../context/ThemeContext";
 import { MdDarkMode, MdLightMode } from "react-icons/md";
-import Input from "../others/Input";
 import { motion, AnimatePresence } from "framer-motion";
 
 const Header = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useContext(AuthContext);
   const { theme, toggleTheme } = useContext(ThemeContext);
   const searchRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  // Handle scroll to add background blur/shadow when scrolling down
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
-      navigate(`/properties?search=${encodeURIComponent(searchTerm)}`);
+      navigate(`/search?searchTerm=${encodeURIComponent(searchTerm)}`);
       setSearchTerm("");
     }
   };
@@ -31,196 +54,257 @@ const Header = () => {
     return "/dashboard";
   };
 
-  const toggleProfileDropdown = () => {
-    setProfileDropdownOpen(!profileDropdownOpen);
+  const toggleProfileDropdown = () => setProfileDropdownOpen(!profileDropdownOpen);
+  const isDark = theme === "dark";
+
+  const navLinks = [
+    { name: "Home", path: "/" },
+    { name: "About", path: "/about" },
+    { name: "Contact", path: "/contact" },
+  ];
+
+  /* ────────── Animation Variants ────────── */
+  const logoVariants = {
+    initial: { opacity: 0, scale: 0.8 },
+    animate: { opacity: 1, scale: 1, transition: { duration: 0.5, type: "spring", stiffness: 120 } },
+    hover: { scale: 1.05, transition: { duration: 0.3, type: "spring", stiffness: 300 } },
+    tap: { scale: 0.95 },
   };
 
   const menuVariants = {
-    hidden: { opacity: 0, y: -20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
-    exit: { opacity: 0, y: -20, transition: { duration: 0.2 } },
+    hidden: { opacity: 0, height: 0 },
+    visible: { opacity: 1, height: "auto", transition: { duration: 0.3, ease: "easeInOut" } },
+    exit: { opacity: 0, height: 0, transition: { duration: 0.2, ease: "easeInOut" } },
   };
 
   const dropdownVariants = {
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: { opacity: 1, scale: 1, transition: { duration: 0.2 } },
-  };
-
-  const logoVariants = {
-    initial: { opacity: 0, scale: 0.8, rotate: -10 },
-    animate: {
-      opacity: 1,
-      scale: 1,
-      rotate: 0,
-      transition: { duration: 0.5, type: "spring", stiffness: 120 },
-    },
-    hover: {
-      scale: 1.1,
-      filter: "brightness(1.3)",
-      transition: { duration: 0.3, type: "spring", stiffness: 300 },
-    },
-    tap: { scale: 0.95, transition: { duration: 0.2 } },
+    hidden: { opacity: 0, y: -10, scale: 0.95 },
+    visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.2, ease: "easeOut" } },
+    exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeIn" } },
   };
 
   return (
-    <header className={`shadow-lg ${theme === "light" ? "bg-white" : "bg-gray-900"} transition-colors duration-300`}>
-      <div className="flex justify-between items-center max-w-7xl mx-auto p-4 lg:p-6">
-        {/* Logo */}
+    <header
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
+        scrolled 
+          ? isDark 
+            ? "bg-gray-900/80 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.5)] border-b border-gray-800" 
+            : "bg-white/80 backdrop-blur-md shadow-md border-b border-gray-200"
+          : isDark 
+            ? "bg-gray-900 border-b border-gray-800/50" 
+            : "bg-white border-b border-gray-100"
+      }`}
+    >
+      <div className="flex justify-between items-center max-w-7xl mx-auto px-4 lg:px-8 h-20">
+        
+        {/* ── Logo ── */}
         <Link to="/">
-          <motion.h1
-            className="font-extrabold text-2xl sm:text-3xl flex items-center gap-2"
+          <motion.div
+            className="flex items-center gap-2"
             variants={logoVariants}
             initial="initial"
             animate="animate"
             whileHover="hover"
             whileTap="tap"
           >
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-500">real</span>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">estate prime</span>
-          </motion.h1>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <span className="text-white font-extrabold text-xl">R</span>
+            </div>
+            <h1 className="font-extrabold text-2xl tracking-tight hidden sm:block">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-500">Real</span>
+              <span className={isDark ? "text-white" : "text-gray-800"}>Estate</span>
+            </h1>
+          </motion.div>
         </Link>
 
-        {/* Search Bar */}
+        {/* ── Search Bar (Desktop) ── */}
         <motion.form
           onSubmit={handleSearch}
-          className="hidden sm:flex flex-1 max-w-lg mx-4 relative"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          className="hidden md:flex flex-1 max-w-md mx-8 relative group"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <input
-            ref={searchRef}
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search properties..."
-            className={`w-full py-2 px-4 pr-12 rounded-full border-2 ${
-              theme === "light" ? "border-gray-200 bg-gray-100" : "border-gray-700 bg-gray-800 text-white"
-            } focus:outline-none focus:border-fuchsia-500 transition-all duration-300`}
-          />
-          <button
-            type="submit"
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-fuchsia-500 transition"
-          >
-            <FaSearch size={20} />
-          </button>
+          <div className="relative w-full">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <FaSearch className={`w-4 h-4 ${isDark ? "text-gray-400 group-focus-within:text-blue-400" : "text-gray-500 group-focus-within:text-blue-600"} transition-colors`} />
+            </div>
+            <input
+              ref={searchRef}
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search properties, locations..."
+              className={`w-full py-2.5 pl-11 pr-4 rounded-full text-sm font-medium transition-all duration-300 outline-none border-2 ${
+                isDark 
+                  ? "bg-gray-800/50 border-gray-700 text-white placeholder-gray-400 focus:bg-gray-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20" 
+                  : "bg-gray-100 border-transparent text-gray-800 placeholder-gray-500 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20"
+              }`}
+            />
+          </div>
         </motion.form>
 
-        {/* Mobile Menu Toggle */}
-        <div className="sm:hidden flex items-center gap-4">
-          <motion.button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="text-gray-600 hover:text-fuchsia-500 transition"
-            whileTap={{ scale: 0.9 }}
-          >
-            {menuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
-          </motion.button>
-          <motion.button
-            onClick={toggleTheme}
-            className="text-yellow-500 hover:text-yellow-400 transition"
-            whileTap={{ scale: 0.9 }}
-          >
-            {theme === "light" ? <MdDarkMode size={28} /> : <MdLightMode size={28} />}
-          </motion.button>
+        {/* ── Desktop Navigation & Actions ── */}
+        <div className="hidden md:flex items-center gap-6">
+          
+          {/* Nav Links */}
+          <nav className="flex items-center gap-6">
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.path;
+              return (
+                <Link key={link.name} to={link.path} className="relative group py-2">
+                  <span className={`text-sm font-bold transition-colors ${
+                    isActive 
+                      ? "text-blue-500" 
+                      : isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"
+                  }`}>
+                    {link.name}
+                  </span>
+                  {isActive && (
+                    <motion.div layoutId="underline" className="absolute left-0 bottom-0 w-full h-0.5 bg-blue-500 rounded-full" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className={`w-px h-6 ${isDark ? "bg-gray-700" : "bg-gray-300"}`}></div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-4">
+            {/* Theme Toggle */}
+            <motion.button
+              onClick={toggleTheme}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                isDark ? "bg-gray-800 text-yellow-400 hover:bg-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {isDark ? <MdLightMode size={20} /> : <MdDarkMode size={20} />}
+            </motion.button>
+
+            {/* Notification Bell (Seller Only) */}
+            {user && user.role === "seller" && (
+              <motion.button
+                onClick={() => navigate("/notifications")}
+                className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                  isDark ? "bg-gray-800 text-gray-300 hover:bg-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <FaBell size={18} />
+                <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-white dark:border-gray-900 rounded-full"></span>
+              </motion.button>
+            )}
+
+            {/* User Profile / Login */}
+            {user ? (
+              <div className="relative" ref={dropdownRef}>
+                <motion.button
+                  onClick={toggleProfileDropdown}
+                  className={`flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full border transition-all ${
+                    isDark 
+                      ? "border-gray-700 hover:border-gray-500 bg-gray-800" 
+                      : "border-gray-200 hover:border-gray-300 bg-white shadow-sm"
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">
+                    {user.username ? user.username.charAt(0).toUpperCase() : "U"}
+                  </div>
+                  <span className={`text-sm font-semibold ${isDark ? "text-gray-200" : "text-gray-700"}`}>
+                    {user.username || "Profile"}
+                  </span>
+                </motion.button>
+
+                <AnimatePresence>
+                  {profileDropdownOpen && (
+                    <motion.div
+                      variants={dropdownVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className={`absolute right-0 mt-3 w-56 rounded-2xl shadow-2xl border overflow-hidden z-50 ${
+                        isDark ? "bg-gray-900 border-gray-700" : "bg-white border-gray-100"
+                      }`}
+                    >
+                      <div className={`p-4 border-b ${isDark ? "border-gray-800" : "border-gray-100"}`}>
+                        <p className={`text-sm font-bold truncate ${isDark ? "text-white" : "text-gray-900"}`}>{user.username}</p>
+                        <p className={`text-xs mt-0.5 truncate ${isDark ? "text-gray-400" : "text-gray-500"}`}>{user.email}</p>
+                        <span className="inline-block mt-2 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400">
+                          {user.role}
+                        </span>
+                      </div>
+                      <div className="p-2">
+                        <Link
+                          to={getDashboardRoute()}
+                          onClick={() => setProfileDropdownOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                            isDark ? "text-gray-300 hover:bg-gray-800 hover:text-white" : "text-gray-600 hover:bg-blue-50 hover:text-blue-600"
+                          }`}
+                        >
+                          <FaCog className={isDark ? "text-gray-400" : "text-gray-400"} />
+                          Dashboard
+                        </Link>
+                        <button
+                          onClick={() => {
+                            logout();
+                            setProfileDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                            isDark ? "text-red-400 hover:bg-red-500/10" : "text-red-600 hover:bg-red-50"
+                          }`}
+                        >
+                          <FaSignOutAlt />
+                          Logout
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <Link to="/login">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold text-sm px-6 py-2.5 rounded-full hover:from-blue-700 hover:to-blue-600 shadow-lg shadow-blue-500/30 transition-all"
+                >
+                  Sign In
+                </motion.button>
+              </Link>
+            )}
+          </div>
         </div>
 
-        {/* Desktop Navigation */}
-        <ul className="hidden sm:flex items-center gap-6">
-          <motion.li whileHover={{ scale: 1.1 }} transition={{ type: "spring", stiffness: 300 }}>
-            <Link to="/contact" className="text-gray-400 hover:text-fuchsia-500 transition font-medium">
-              Contact
-            </Link>
-          </motion.li>
-          <motion.li whileHover={{ scale: 1.1 }} transition={{ type: "spring", stiffness: 300 }}>
-            <Link to="/about" className="text-gray-400 hover:text-fuchsia-500 transition font-medium">
-              About
-            </Link>
-          </motion.li>
-
-          {/* Notification Bell for Sellers */}
-          {user && user.role === "seller" && (
-            <motion.button
-              onClick={() => navigate("/notifications")}
-              className="relative text-gray-400 hover:text-fuchsia-500 transition"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <FaBell size={24} />
-              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                3
-              </span>
-            </motion.button>
-          )}
-
-          {/* User Profile Dropdown */}
-          {user ? (
-            <div className="relative">
-              <motion.button
-                onClick={toggleProfileDropdown}
-                className="flex items-center gap-2 text-gray-400 hover:text-fuchsia-500 transition"
-                whileHover={{ scale: 1.05 }}
-              >
-                <FaUserCircle size={28} />
-                <span className="font-medium">{user.username || "Profile"}</span>
-              </motion.button>
-              <AnimatePresence>
-                {profileDropdownOpen && (
-                  <motion.div
-                    variants={dropdownVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="hidden"
-                    className={`absolute right-0 mt-2 w-48 rounded-lg shadow-xl ${
-                      theme === "light" ? "bg-white" : "bg-gray-800"
-                    } py-2 z-50`}
-                  >
-                    <Link
-                      to={getDashboardRoute()}
-                      onClick={() => setProfileDropdownOpen(false)}
-                      className="block px-4 py-2 text-gray-600 hover:bg-fuchsia-100 hover:text-fuchsia-600 transition"
-                    >
-                      {user.role === "admin"
-                        ? "Admin Dashboard"
-                        : user.role === "seller"
-                        ? "Seller Dashboard"
-                        : "User Dashboard"}
-                    </Link>
-                    <button
-                      onClick={() => {
-                        logout();
-                        setProfileDropdownOpen(false);
-                      }}
-                      className="block w-full text-left px-4 py-2 text-gray-600 hover:bg-red-100 hover:text-red-600 transition"
-                    >
-                      Logout
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ) : (
-            <motion.div whileHover={{ scale: 1.05 }} transition={{ type: "spring", stiffness: 300 }}>
-              <Link to="/login">
-                <button className="bg-gradient-to-r from-blue-500 to-blue-700 text-white px-6 py-2 rounded-full hover:from-blue-600 hover:to-blue-800 transition-all shadow-lg">
-                  Login
-                </button>
-              </Link>
-            </motion.div>
-          )}
-
-          {/* Theme Toggle */}
+        {/* ── Mobile Menu Toggle ── */}
+        <div className="md:hidden flex items-center gap-3">
           <motion.button
             onClick={toggleTheme}
-            className="text-yellow-500 hover:text-yellow-400 transition"
-            whileHover={{ scale: 1.1 }}
+            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+              isDark ? "bg-gray-800 text-yellow-400" : "bg-gray-100 text-gray-600"
+            }`}
             whileTap={{ scale: 0.9 }}
           >
-            {theme === "light" ? <MdDarkMode size={28} /> : <MdLightMode size={28} />}
+            {isDark ? <MdLightMode size={18} /> : <MdDarkMode size={18} />}
           </motion.button>
-        </ul>
+          
+          <motion.button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+              isDark ? "bg-gray-800 text-gray-300" : "bg-gray-100 text-gray-600"
+            }`}
+            whileTap={{ scale: 0.9 }}
+          >
+            {menuOpen ? <FaTimes size={18} /> : <FaBars size={18} />}
+          </motion.button>
+        </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* ── Mobile Navigation Menu ── */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
@@ -228,102 +312,94 @@ const Header = () => {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className={`sm:hidden ${theme === "light" ? "bg-white" : "bg-gray-900"} shadow-xl p-6`}
+            className={`md:hidden overflow-hidden ${
+              isDark ? "bg-gray-900 border-b border-gray-800" : "bg-white border-b border-gray-200 shadow-xl"
+            }`}
           >
-            <ul className="flex flex-col items-center gap-6">
-              <motion.li
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 300 }}
-                onClick={() => setMenuOpen(false)}
-              >
-                <Link to="/" className="text-gray-600 hover:text-fuchsia-500 transition font-medium text-lg">
-                  Home
-                </Link>
-              </motion.li>
-              <motion.li
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 300 }}
-                onClick={() => setMenuOpen(false)}
-              >
-                <Link to="/about" className="text-gray-600 hover:text-fuchsia-500 transition font-medium text-lg">
-                  About
-                </Link>
-              </motion.li>
-              <motion.li
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 300 }}
-                onClick={() => setMenuOpen(false)}
-              >
-                <Link to="/contact" className="text-gray-600 hover:text-fuchsia-500 transition font-medium text-lg">
-                  Contact
-                </Link>
-              </motion.li>
-              {user && user.role === "seller" && (
-                <motion.li
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                  onClick={() => {
-                    setMenuOpen(false);
-                    navigate("/notifications");
-                  }}
-                  className="flex items-center gap-2 text-gray-600 hover:text-fuchsia-500 transition font-medium text-lg"
-                >
-                  <FaBell size={20} /> Notifications
-                </motion.li>
-              )}
-              {user ? (
-                <>
-                  <motion.li
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ type: "spring", stiffness: 300 }}
+            <div className="px-4 py-6 space-y-6">
+              {/* Mobile Search */}
+              <form onSubmit={handleSearch} className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <FaSearch className={isDark ? "text-gray-400" : "text-gray-500"} />
+                </div>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search properties..."
+                  className={`w-full py-3 pl-11 pr-4 rounded-xl text-sm font-medium outline-none ${
+                    isDark 
+                      ? "bg-gray-800 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500" 
+                      : "bg-gray-100 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                  }`}
+                />
+              </form>
+
+              {/* Mobile Links */}
+              <nav className="flex flex-col space-y-2">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.name}
+                    to={link.path}
                     onClick={() => setMenuOpen(false)}
+                    className={`px-4 py-3 rounded-xl font-bold transition-colors ${
+                      location.pathname === link.path
+                        ? isDark ? "bg-blue-900/30 text-blue-400" : "bg-blue-50 text-blue-600"
+                        : isDark ? "text-gray-300 hover:bg-gray-800" : "text-gray-600 hover:bg-gray-50"
+                    }`}
                   >
-                    <Link
-                      to={getDashboardRoute()}
-                      className="text-gray-600 hover:text-fuchsia-500 transition font-medium text-lg"
-                    >
-                      {user.role === "admin"
-                        ? "Admin Dashboard"
-                        : user.role === "seller"
-                        ? "Seller Dashboard"
-                        : "User Dashboard"}
-                    </Link>
-                  </motion.li>
-                  <motion.li
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                    onClick={() => {
-                      logout();
-                      setMenuOpen(false);
-                    }}
-                    className="text-gray-600 hover:text-red-500 transition font-medium text-lg"
-                  >
-                    Logout
-                  </motion.li>
-                </>
-              ) : (
-                <motion.li
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <Link to="/login" className="text-gray-600 hover:text-fuchsia-500 transition font-medium text-lg">
-                    Login
+                    {link.name}
                   </Link>
-                </motion.li>
-              )}
-              <motion.li
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 300 }}
-                onClick={() => {
-                  setMenuOpen(false);
-                  toggleTheme();
-                }}
-                className="text-gray-600 hover:text-yellow-500 transition font-medium text-lg"
-              >
-                {theme === "light" ? "Dark Mode" : "Light Mode"}
-              </motion.li>
-            </ul>
+                ))}
+              </nav>
+
+              <div className={`h-px w-full ${isDark ? "bg-gray-800" : "bg-gray-100"}`}></div>
+
+              {/* Mobile Auth/Profile */}
+              <div className="px-2">
+                {user ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 px-2">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 flex items-center justify-center text-white font-bold">
+                        {user.username ? user.username.charAt(0).toUpperCase() : "U"}
+                      </div>
+                      <div>
+                        <p className={`font-bold ${isDark ? "text-white" : "text-gray-900"}`}>{user.username}</p>
+                        <p className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>{user.email}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Link
+                        to={getDashboardRoute()}
+                        onClick={() => setMenuOpen(false)}
+                        className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-colors ${
+                          isDark ? "bg-gray-800 text-white" : "bg-gray-100 text-gray-900"
+                        }`}
+                      >
+                        <FaCog /> Dashboard
+                      </Link>
+                      <button
+                        onClick={() => {
+                          logout();
+                          setMenuOpen(false);
+                        }}
+                        className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-colors ${
+                          isDark ? "bg-red-500/10 text-red-400" : "bg-red-50 text-red-600"
+                        }`}
+                      >
+                        <FaSignOutAlt /> Logout
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <Link to="/login" onClick={() => setMenuOpen(false)}>
+                    <button className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/30">
+                      Sign In to Your Account
+                    </button>
+                  </Link>
+                )}
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
