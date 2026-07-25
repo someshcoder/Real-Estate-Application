@@ -17,6 +17,7 @@ import PaymentSuccessPage from "./pages/payment/PaymentSuccessPage";
 import MessagePage from "./pages/messagePage/MessagePage";
 import SellerDashboard from "./pages/SellerDashboard";
 import BackToHomeWrapper from "./components/others/BackToHomeWrapper"; // Import wrapper component
+import AuthToast from "./components/others/AuthToast"; // Global login/logout notification
 import ContactUs from "./pages/about/Contact";
 
 const App = () => {
@@ -24,6 +25,7 @@ const App = () => {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
+          <AuthToast />
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
