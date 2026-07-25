@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useRef } from "react";
 
 export const AuthContext = createContext();
 
@@ -6,6 +6,15 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [authToast, setAuthToast] = useState(null); // { type: 'login' | 'logout', message }
+  const toastTimerRef = useRef(null);
+
+  // Show a global auth notification (auto-hides after 2 seconds)
+  const showAuthToast = (type, message) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setAuthToast({ type, message });
+    toastTimerRef.current = setTimeout(() => setAuthToast(null), 2000);
+  };
 
   useEffect(() => {
     const initializeAuth = () => {
@@ -36,6 +45,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("user", JSON.stringify(userData));
     localStorage.setItem("token", token);
     setUser(userData);
+    showAuthToast("login", "Login Successful");
   };
 
   const logout = () => {
@@ -44,6 +54,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("favorites");
     setUser(null);
     setFavorites([]); // Clear favorites on logout
+    showAuthToast("logout", "Logout Successful");
   };
 
   const addToFavorites = (property) => {
@@ -53,7 +64,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, favorites, addToFavorites, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, favorites, addToFavorites, loading, authToast }}>
       {children}
     </AuthContext.Provider>
   );
