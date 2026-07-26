@@ -1,18 +1,21 @@
 {
-  "buildCommand": "cd client && npm install && npm run build",
-  "outputDirectory": "client/dist",
-  "env": {
-    "NODE_ENV": "production"
-  },
+  "version": 3,
+  "builds": [
+    {
+      "src": "client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "handle": "filesystem"
     },
     {
-      "src": "/(?!.*\\.)",
-      "dest": "/index.html",
-      "status": 200
+      "src": "/.*",
+      "dest": "/index.html"
     }
   ]
 }
