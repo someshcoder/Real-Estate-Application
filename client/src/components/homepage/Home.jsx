@@ -6,7 +6,7 @@ import UserDashboard from "../../pages/UserDashboard";
 import Footer from "../others/Footer";
 import SubscribeSection from "../others/SubscribeSection";
 import Value from "../others/Value";
-import PropertyList from "../seller/PropertyList";
+import PropertyList from "../seller/propertyList";
 import Header from "./Header";
 import HeroSection from "./HeroSection";
 import { Link } from "react-router-dom";
