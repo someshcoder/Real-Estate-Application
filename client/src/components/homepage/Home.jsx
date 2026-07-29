@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 import { useContext, useState, useEffect, useRef, useMemo } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { ThemeContext } from "../../context/ThemeContext";
-import Animated from "../others/animated";
+import Animated from "../others/Animated";
 import propertiesData from "../seller/properties.json";
 import {
   CheckCircle,
