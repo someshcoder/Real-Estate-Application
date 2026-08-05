@@ -25,8 +25,7 @@ import {
   Bath,
   Ruler,
 } from "lucide-react";
-
-const API_URL = "http://localhost:5000";
+import { API_URL } from "../config";
 
 // ---------- Animation Variants ----------
 const containerVariants = {

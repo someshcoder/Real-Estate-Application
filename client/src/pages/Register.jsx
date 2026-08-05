@@ -4,8 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeContext } from "../context/ThemeContext";
 import { User, Mail, Lock, Shield, ArrowRight, Loader2, Home } from "lucide-react";
-
-const API_URL = "http://localhost:5000";
+import { API_URL } from "../config";
 
 const Register = () => {
   const [name, setName] = useState("");

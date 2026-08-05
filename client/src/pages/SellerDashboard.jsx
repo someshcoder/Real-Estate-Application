@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { ThemeContext } from "../context/ThemeContext";
+import { API_URL } from "../config";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { MdDarkMode, MdLightMode } from "react-icons/md";
@@ -113,7 +114,7 @@ const SellerDashboard = () => {
   // ---------- Fetch properties ----------
   useEffect(() => {
     setLoading(true);
-    fetch("http://localhost:5000/properties", {
+    fetch(`${API_URL}/properties`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -155,7 +156,7 @@ const SellerDashboard = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    fetch("http://localhost:5000/properties/add", {
+    fetch(`${API_URL}/properties/add`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -179,7 +180,7 @@ const SellerDashboard = () => {
   };
 
   const handleBlockUnblock = (propertyId) => {
-    fetch(`http://localhost:5000/properties/block/${propertyId}`, {
+    fetch(`${API_URL}/properties/block/${propertyId}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -199,7 +200,7 @@ const SellerDashboard = () => {
         "Are you sure you want to delete this property? This action cannot be undone."
       )
     ) {
-      fetch(`http://localhost:5000/properties/delete/${propertyId}`, {
+      fetch(`${API_URL}/properties/delete/${propertyId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -229,7 +230,7 @@ const SellerDashboard = () => {
   };
 
   const submitEdit = () => {
-    fetch(`http://localhost:5000/properties/edit/${editingProperty.id}`, {
+    fetch(`${API_URL}/properties/edit/${editingProperty.id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

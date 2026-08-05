@@ -5,8 +5,7 @@ import { AuthContext } from "../context/AuthContext";
 import { ThemeContext } from "../context/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, ArrowRight, Loader2, Home } from "lucide-react";
-
-const API_URL = "http://localhost:5000";
+import { API_URL } from "../config";
 
 const Login = () => {
     const [email, setEmail] = useState("");
