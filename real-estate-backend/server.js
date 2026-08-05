@@ -11,11 +11,28 @@ app.use(cors());
 app.use(express.json());
 
 
-// MongoDB Connection
+// MongoDB Connection for Serverless & Express
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb+srv://someshbhatnagar544_db_user:bixBpFJV54cfzDTF@cluster0.vvevb4o.mongodb.net/property-app?appName=Cluster0';
-mongoose.connect(MONGO_URI)
-.then(() => console.log('MongoDB connected to Atlas'))
-.catch(err => console.error('MongoDB connection error:', err));
+
+let isConnected = false;
+const connectDB = async () => {
+  if (isConnected || mongoose.connection.readyState >= 1) {
+    return;
+  }
+  try {
+    const db = await mongoose.connect(MONGO_URI);
+    isConnected = db.connections[0].readyState >= 1;
+    console.log('MongoDB connected to Atlas');
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+  }
+};
+
+// Middleware to ensure DB connection is ready on every request
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 // User Schema
 const userSchema = new mongoose.Schema({

@@ -1,24 +1,16 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "real-estate-backend/server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "client/dist"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(auth|properties|users|messages|admin)(.*)",
-      "dest": "real-estate-backend/server.js"
-    },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/auth/(.*)", "destination": "/api/index.js" },
+    { "source": "/auth", "destination": "/api/index.js" },
+    { "source": "/properties/(.*)", "destination": "/api/index.js" },
+    { "source": "/properties", "destination": "/api/index.js" },
+    { "source": "/users/(.*)", "destination": "/api/index.js" },
+    { "source": "/users", "destination": "/api/index.js" },
+    { "source": "/messages/(.*)", "destination": "/api/index.js" },
+    { "source": "/messages", "destination": "/api/index.js" },
+    { "source": "/admin/(.*)", "destination": "/api/index.js" },
+    { "source": "/admin", "destination": "/api/index.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
