@@ -274,5 +274,21 @@
     "id": 107,
     "blocked": false,
     "deleted": false
+  },
+  {
+    "title": "S.K. Villa",
+    "image": "https://img.magnific.com/premium-photo/there-is-white-house-with-red-roof-red-tiled-walkway-generative-ai_1035769-9403.jpg?semt=ais_hybrid&w=740&q=80",
+    "location": "Sikkin",
+    "description": "living in this is a luxirious feel",
+    "price": "6000000",
+    "beds": "4",
+    "baths": "4",
+    "size": "1200",
+    "pricePerSqft": "4500",
+    "rating": "4.5",
+    "time": "recently added",
+    "id": 108,
+    "blocked": false,
+    "deleted": false
   }
 ]
