@@ -12,7 +12,8 @@ app.use(express.json());
 
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/property-app')
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb+srv://someshbhatnagar544_db_user:bixBpFJV54cfzDTF@cluster0.vvevb4o.mongodb.net/property-app?appName=Cluster0';
+mongoose.connect(MONGO_URI)
 .then(() => console.log('MongoDB connected to Atlas'))
 .catch(err => console.error('MongoDB connection error:', err));
 

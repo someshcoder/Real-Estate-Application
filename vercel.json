@@ -2,6 +2,10 @@
   "version": 2,
   "builds": [
     {
+      "src": "real-estate-backend/server.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
@@ -10,6 +14,10 @@
     }
   ],
   "routes": [
+    {
+      "src": "/(auth|properties|users|messages|admin)(.*)",
+      "dest": "real-estate-backend/server.js"
+    },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
